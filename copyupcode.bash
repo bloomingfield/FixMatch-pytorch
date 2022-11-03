@@ -1,0 +1,1 @@
+ rsync -avzh --exclude .git --exclude results . nbloomfield@spartan.hpc.unimelb.edu.au:/data/cephfs/punim0980/FixMatch-pytorch2/
