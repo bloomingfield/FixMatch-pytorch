@@ -7,6 +7,9 @@ from torchvision import datasets
 from torchvision import transforms
 
 from .randaugment import RandAugmentMC
+from pdb import set_trace as pb
+import torch
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +20,18 @@ cifar100_std = (0.2675, 0.2565, 0.2761)
 normal_mean = (0.5, 0.5, 0.5)
 normal_std = (0.5, 0.5, 0.5)
 
+import random
+
+def transform_seed(x):
+    torch.manual_seed(0)
+    np.random.seed(0)
+    random.seed(0)
+    return x
+
 
 def get_cifar10(args, root):
     transform_labeled = transforms.Compose([
+        transforms.Lambda(transform_seed),
         transforms.RandomHorizontalFlip(),
         transforms.RandomCrop(size=32,
                               padding=int(32*0.125),
@@ -28,6 +40,7 @@ def get_cifar10(args, root):
         transforms.Normalize(mean=cifar10_mean, std=cifar10_std)
     ])
     transform_val = transforms.Compose([
+        transforms.Lambda(transform_seed),
         transforms.ToTensor(),
         transforms.Normalize(mean=cifar10_mean, std=cifar10_std)
     ])
@@ -90,29 +103,40 @@ def x_u_split(args, labels):
     labeled_idx = []
     # unlabeled data: all data (https://github.com/kekmodel/FixMatch-pytorch/issues/10)
     unlabeled_idx = np.array(range(len(labels)))
+
+    rng = np.random.default_rng(0)
     for i in range(args.num_classes):
         idx = np.where(labels == i)[0]
-        idx = np.random.choice(idx, label_per_class, False)
+        idx = rng.choice(idx, size=label_per_class, replace=False)
         labeled_idx.extend(idx)
+    
     labeled_idx = np.array(labeled_idx)
+    print(labeled_idx)
     assert len(labeled_idx) == args.num_labeled
 
     if args.expand_labels or args.num_labeled < args.batch_size:
         num_expand_x = math.ceil(
             args.batch_size * args.eval_step / args.num_labeled)
-        labeled_idx = np.hstack([labeled_idx for _ in range(num_expand_x)])
-    np.random.shuffle(labeled_idx)
+        rng = np.random.default_rng(0)
+        labeled_idx = np.sort(labeled_idx)
+        permuted_ind = np.hstack([rng.permutation(labeled_idx.shape[0]) for _ in range(num_expand_x)])
+        labeled_idx = labeled_idx[permuted_ind]
+    # np.random.shuffle(labeled_idx)
+    print(permuted_ind)
+    print(labeled_idx)
     return labeled_idx, unlabeled_idx
 
 
 class TransformFixMatch(object):
     def __init__(self, mean, std):
         self.weak = transforms.Compose([
+            transforms.Lambda(transform_seed),
             transforms.RandomHorizontalFlip(),
             transforms.RandomCrop(size=32,
                                   padding=int(32*0.125),
                                   padding_mode='reflect')])
         self.strong = transforms.Compose([
+            transforms.Lambda(transform_seed),
             transforms.RandomHorizontalFlip(),
             transforms.RandomCrop(size=32,
                                   padding=int(32*0.125),
