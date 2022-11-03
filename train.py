@@ -71,7 +71,7 @@ def main():
     parser = argparse.ArgumentParser(description='PyTorch FixMatch Training')
     parser.add_argument('--gpu-id', default='0', type=int,
                         help='id(s) for CUDA_VISIBLE_DEVICES')
-    parser.add_argument('--num-workers', type=int, default=0,
+    parser.add_argument('--num-workers', type=int, default=6,
                         help='number of workers')
     parser.add_argument('--dataset', default='cifar10', type=str,
                         choices=['cifar10', 'cifar100'],
@@ -219,6 +219,7 @@ def main():
         sampler=SequentialSampler(labeled_dataset),
         batch_size=args.batch_size,
         num_workers=args.num_workers,
+        pin_memory=True,
         drop_last=True)
 
     unlabeled_trainloader = DataLoader(
@@ -226,12 +227,14 @@ def main():
         sampler=train_sampler(unlabeled_dataset, generator=generator),
         batch_size=args.batch_size*args.mu,
         num_workers=args.num_workers,
+        pin_memory=True,
         drop_last=True)
 
     test_loader = DataLoader(
         test_dataset,
         sampler=SequentialSampler(test_dataset),
         batch_size=args.batch_size,
+        pin_memory=True,
         num_workers=args.num_workers)
 
     if args.local_rank not in [-1, 0]:
@@ -369,7 +372,7 @@ def train(args, labeled_trainloader, unlabeled_trainloader, test_loader,
                                   reduction='none') * mask).mean()
 
             loss = Lx + args.lambda_u * Lu
-            # pb()
+            pb()
 
             if args.amp:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -495,5 +498,5 @@ def test(args, test_loader, model, epoch):
 
 
 if __name__ == '__main__':
-    # torch.set_default_dtype(torch.float64)
+    torch.set_default_dtype(torch.float64)
     main()

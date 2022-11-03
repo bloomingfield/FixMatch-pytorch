@@ -23,9 +23,9 @@ normal_std = (0.5, 0.5, 0.5)
 import random
 
 def transform_seed(x):
-    # torch.manual_seed(0)
-    # np.random.seed(0)
-    # random.seed(0)
+    torch.manual_seed(0)
+    np.random.seed(0)
+    random.seed(0)
     return x
 
 
