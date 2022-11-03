@@ -105,3 +105,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+
+cifar10_small_pyz_finetune_size0_50000_seed12_039161ffb6.out
+*.out
+result
+apex

@@ -20,6 +20,8 @@ from tqdm import tqdm
 from dataset.cifar import DATASET_GETTERS
 from utils import AverageMeter, accuracy
 
+from pdb import set_trace as pb
+
 logger = logging.getLogger(__name__)
 best_acc = 0
 
@@ -74,7 +76,7 @@ def main():
     parser.add_argument('--dataset', default='cifar10', type=str,
                         choices=['cifar10', 'cifar100'],
                         help='dataset name')
-    parser.add_argument('--num-labeled', type=int, default=4000,
+    parser.add_argument('--num-labeled', type=int, default=40,
                         help='number of labeled data')
     parser.add_argument("--expand-labels", action="store_true",
                         help="expand labels to fit eval steps")
@@ -208,7 +210,8 @@ def main():
     if args.local_rank == 0:
         torch.distributed.barrier()
 
-    train_sampler = RandomSampler if args.local_rank == -1 else DistributedSampler
+    # train_sampler = RandomSampler if args.local_rank == -1 else DistributedSampler
+    train_sampler = SequentialSampler if args.local_rank == -1 else DistributedSampler
 
     labeled_trainloader = DataLoader(
         labeled_dataset,
@@ -336,7 +339,7 @@ def train(args, labeled_trainloader, unlabeled_trainloader, test_loader,
                 inputs_x, targets_x = labeled_iter.next()
 
             try:
-                (inputs_u_w, inputs_u_s), _ = unlabeled_iter.next()
+                (inputs_u_w, inputs_u_s), y = unlabeled_iter.next()
             except:
                 if args.world_size > 1:
                     unlabeled_epoch += 1
@@ -353,7 +356,7 @@ def train(args, labeled_trainloader, unlabeled_trainloader, test_loader,
             logits = de_interleave(logits, 2*args.mu+1)
             logits_x = logits[:batch_size]
             logits_u_w, logits_u_s = logits[batch_size:].chunk(2)
-            del logits
+            # del logits
 
             Lx = F.cross_entropy(logits_x, targets_x, reduction='mean')
 
@@ -365,6 +368,7 @@ def train(args, labeled_trainloader, unlabeled_trainloader, test_loader,
                                   reduction='none') * mask).mean()
 
             loss = Lx + args.lambda_u * Lu
+            pb()
 
             if args.amp:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -490,4 +494,5 @@ def test(args, test_loader, model, epoch):
 
 
 if __name__ == '__main__':
+    torch.set_default_dtype(torch.float64)
     main()

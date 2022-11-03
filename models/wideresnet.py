@@ -4,6 +4,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from scipy import stats
+import numpy as np
+
 logger = logging.getLogger(__name__)
 
 
@@ -106,6 +109,8 @@ class WideResNet(nn.Module):
                 nn.init.xavier_normal_(m.weight)
                 nn.init.constant_(m.bias, 0.0)
 
+        self.reset_parameters()
+
     def forward(self, x):
         out = self.conv1(x)
         out = self.block1(out)
@@ -115,6 +120,28 @@ class WideResNet(nn.Module):
         out = F.adaptive_avg_pool2d(out, 1)
         out = out.view(-1, self.channels)
         return self.fc(out)
+
+    def reset_parameters(self):
+        def conv2d_weight_truncated_normal_init(p):
+            fan_in = p.shape[1]
+            stddev = np.sqrt(1. / fan_in) / .87962566103423978
+            r = stats.truncnorm.rvs(-2, 2, loc=0, scale=1., size=p.shape)
+            r = stddev * r
+            with torch.no_grad():
+                p.copy_(torch.FloatTensor(r))
+
+        def linear_normal_init(p):
+            with torch.no_grad():
+                # p.normal_(std=0.01)
+                p.copy_(torch.FloatTensor(np.random.normal(size=p.shape)))
+
+        for m in self.modules():
+            torch.manual_seed(0)
+            np.random.seed(seed=233423)
+            if isinstance(m, nn.Conv2d):
+                conv2d_weight_truncated_normal_init(m.weight)
+            elif isinstance(m, nn.Linear):
+                linear_normal_init(m.weight)
 
 
 def build_wideresnet(depth, widen_factor, dropout, num_classes):

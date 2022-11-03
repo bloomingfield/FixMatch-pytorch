@@ -7,6 +7,7 @@ from torchvision import datasets
 from torchvision import transforms
 
 from .randaugment import RandAugmentMC
+from pdb import set_trace as pb
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,10 @@ def get_cifar10(args, root):
         transforms.ToTensor(),
         transforms.Normalize(mean=cifar10_mean, std=cifar10_std)
     ])
+    transform_labeled = transform_val
+    # transform_unlabeled = TransformFixMatch(mean=cifar10_mean, std=cifar10_std)
+    transform_unlabeled = TransformFixMatchVal(mean=cifar10_mean, std=cifar10_std)
+
     base_dataset = datasets.CIFAR10(root, train=True, download=True)
 
     train_labeled_idxs, train_unlabeled_idxs = x_u_split(
@@ -42,7 +47,7 @@ def get_cifar10(args, root):
 
     train_unlabeled_dataset = CIFAR10SSL(
         root, train_unlabeled_idxs, train=True,
-        transform=TransformFixMatch(mean=cifar10_mean, std=cifar10_std))
+        transform=transform_unlabeled)
 
     test_dataset = datasets.CIFAR10(
         root, train=False, transform=transform_val, download=False)
@@ -90,18 +95,22 @@ def x_u_split(args, labels):
     labeled_idx = []
     # unlabeled data: all data (https://github.com/kekmodel/FixMatch-pytorch/issues/10)
     unlabeled_idx = np.array(range(len(labels)))
+    rng = np.random.default_rng(0)
     for i in range(args.num_classes):
         idx = np.where(labels == i)[0]
-        idx = np.random.choice(idx, label_per_class, False)
+        idx = rng.choice(idx, size=label_per_class, replace=False)
         labeled_idx.extend(idx)
     labeled_idx = np.array(labeled_idx)
+    # pb()
     assert len(labeled_idx) == args.num_labeled
 
+    labeled_idx = np.sort(labeled_idx)
     if args.expand_labels or args.num_labeled < args.batch_size:
         num_expand_x = math.ceil(
             args.batch_size * args.eval_step / args.num_labeled)
         labeled_idx = np.hstack([labeled_idx for _ in range(num_expand_x)])
-    np.random.shuffle(labeled_idx)
+
+    # np.random.shuffle(labeled_idx)
     return labeled_idx, unlabeled_idx
 
 
@@ -126,6 +135,22 @@ class TransformFixMatch(object):
         weak = self.weak(x)
         strong = self.strong(x)
         return self.normalize(weak), self.normalize(strong)
+
+class TransformFixMatchVal(object):
+    def __init__(self, mean, std):
+        transform_val = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=cifar10_mean, std=cifar10_std)
+        ])
+        self.weak = transform_val
+        self.strong = transform_val
+
+    def __call__(self, x):
+        weak = self.weak(x)
+        strong = self.strong(x)
+        return weak, strong
+
+
 
 
 class CIFAR10SSL(datasets.CIFAR10):
