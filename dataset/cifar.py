@@ -90,11 +90,15 @@ def x_u_split(args, labels):
     labeled_idx = []
     # unlabeled data: all data (https://github.com/kekmodel/FixMatch-pytorch/issues/10)
     unlabeled_idx = np.array(range(len(labels)))
+
+    rng = np.random.default_rng(0)
     for i in range(args.num_classes):
         idx = np.where(labels == i)[0]
-        idx = np.random.choice(idx, label_per_class, False)
+        idx = rng.choice(idx, size=label_per_class, replace=False)
         labeled_idx.extend(idx)
+
     labeled_idx = np.array(labeled_idx)
+    print(labeled_idx)
     assert len(labeled_idx) == args.num_labeled
 
     if args.expand_labels or args.num_labeled < args.batch_size:
