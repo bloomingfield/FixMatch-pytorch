@@ -369,7 +369,7 @@ def train(args, labeled_trainloader, unlabeled_trainloader, test_loader,
                                   reduction='none') * mask).mean()
 
             loss = Lx + args.lambda_u * Lu
-            pb()
+            # pb()
 
             if args.amp:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -495,5 +495,5 @@ def test(args, test_loader, model, epoch):
 
 
 if __name__ == '__main__':
-    torch.set_default_dtype(torch.float64)
+    # torch.set_default_dtype(torch.float64)
     main()

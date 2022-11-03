@@ -23,9 +23,9 @@ normal_std = (0.5, 0.5, 0.5)
 import random
 
 def transform_seed(x):
-    torch.manual_seed(0)
-    np.random.seed(0)
-    random.seed(0)
+    # torch.manual_seed(0)
+    # np.random.seed(0)
+    # random.seed(0)
     return x
 
 
@@ -134,14 +134,16 @@ class TransformFixMatch(object):
             transforms.RandomHorizontalFlip(),
             transforms.RandomCrop(size=32,
                                   padding=int(32*0.125),
-                                  padding_mode='reflect')])
+                                  padding_mode='reflect')
+            ])
         self.strong = transforms.Compose([
             transforms.Lambda(transform_seed),
             transforms.RandomHorizontalFlip(),
             transforms.RandomCrop(size=32,
                                   padding=int(32*0.125),
                                   padding_mode='reflect'),
-            RandAugmentMC(n=2, m=10)])
+            RandAugmentMC(n=2, m=10)
+            ])
         self.normalize = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=mean, std=std)])
