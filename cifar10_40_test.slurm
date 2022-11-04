@@ -18,5 +18,7 @@ module load pytorch/1.9.0-python-3.8.6
 
 cd /data/cephfs/punim0980/FixMatch-pytorch
 
+# python3 train.py --dataset cifar10 --num-labeled 40 --arch wideresnet --batch-size 32 --lr 0.03 --expand-labels --seed 5 --out results/cifar10@40.5.test
+
 python3 train.py --dataset cifar10 --num-labeled 40 --arch wideresnet --batch-size 64 --lr 0.03 --expand-labels --seed 5 --out results/cifar10@40.5.right2
 

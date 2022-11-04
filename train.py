@@ -372,6 +372,7 @@ def train(args, labeled_trainloader, unlabeled_trainloader, test_loader,
                                   reduction='none') * mask).mean()
 
             loss = Lx + args.lambda_u * Lu
+            torch.set_printoptions(precision=10)
             pb()
 
             if args.amp:
